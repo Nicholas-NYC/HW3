@@ -1,0 +1,305 @@
+# Study Group Nicholas Alonso and Nicholas Esposito 
+# First we use the given data to get an accuracy of about 0.35 with the KNN.
+# Using the original data set, nothing on the single linear regression were able to predict over a value of 0.35, so the accuracy in the OLS is somewhat lower than the knn.
+# So, we ran the knn using the poverty level and and the income total with the notion that those in impoverished communities were more likely to be in specific boroughs.
+dat_NYC <- subset(acs2017_ny, (acs2017_ny$in_NYC == 1)&(acs2017_ny$AGE > 20) & (acs2017_ny$AGE < 66))
+attach(dat_NYC)
+summary(dat_NYC)
+borough_f <- factor((in_Bronx + 2*in_Manhattan + 3*in_StatenI + 4*in_Brooklyn + 5*in_Queens), levels=c(1,2,3,4,5),labels = c("Bronx","Manhattan","Staten Island","Brooklyn","Queens"))
+
+norm_varb <- function(X_in) { (X_in - min(X_in, na.rm = TRUE))/( max(X_in, na.rm = TRUE) - min(X_in, na.rm = TRUE) )
+}
+
+norm_inc_tot <- norm_varb(INCTOT)
+norm_poverty <- norm_varb(POVERTY)
+norm_famsize <- norm_varb(FAMSIZE)
+norm_migration <- norm_varb(MIGRATE1D)
+
+data_use_prelim <- data.frame(norm_poverty,norm_inc_tot,norm_famsize,norm_migration)
+good_obs_data_use <- complete.cases(data_use_prelim,borough_f)
+dat_use <- subset(data_use_prelim,good_obs_data_use)
+y_use <- subset(borough_f,good_obs_data_use)
+
+set.seed(12345)
+NN_obs <- sum(good_obs_data_use == 1)
+select1 <- (runif(NN_obs) < 0.8)
+train_data <- subset(dat_use,select1)
+test_data <- subset(dat_use,(!select1))
+cl_data <- y_use[select1]
+true_data <- y_use[!select1]
+
+summary(cl_data)
+prop.table(summary(cl_data))
+summary(train_data)
+require(class)
+for (indx in seq(1, 9, by= 2)) {
+  pred_borough <- knn(train_data, test_data, cl_data, k = indx, l = 0, prob = FALSE, use.all = TRUE)
+  num_correct_labels <- sum(pred_borough == true_data)
+  correct_rate <- num_correct_labels/length(true_data)
+  print(c(indx,correct_rate))
+}
+
+cl_data_n <- as.numeric(cl_data)
+
+model_ols1 <- lm(cl_data_n ~ train_data$norm_poverty + train_data$norm_inc_tot + train_data$norm_famsize + train_data$norm_migration)
+
+y_hat <- fitted.values(model_ols1)
+cl_data_n <- as.numeric(cl_data)
+# maybe try classifying one at a time with OLS
+
+cl_data_n1 <- as.numeric(cl_data_n == 1)
+model_ols_v1 <- lm(cl_data_n1 ~ train_data$norm_poverty + train_data$norm_inc_tot)
+y_hat_v1 <- fitted.values(model_ols_v1)
+mean(y_hat_v1[cl_data_n1 == 1])
+mean(y_hat_v1[cl_data_n1 == 0])
+
+cl_data_n1 <- as.numeric(cl_data_n == 2)
+model_ols_v1 <- lm(cl_data_n1 ~ train_data$norm_poverty + train_data$norm_inc_tot)
+y_hat_v1 <- fitted.values(model_ols_v1)
+mean(y_hat_v1[cl_data_n1 == 1])
+mean(y_hat_v1[cl_data_n1 == 0])
+cl_data_n1 <- as.numeric(cl_data_n == 3)
+model_ols_v1 <- lm(cl_data_n1 ~ train_data$norm_poverty + train_data$norm_inc_tot)
+y_hat_v1 <- fitted.values(model_ols_v1)
+mean(y_hat_v1[cl_data_n1 == 1])
+mean(y_hat_v1[cl_data_n1 == 0])
+cl_data_n1 <- as.numeric(cl_data_n == 4)
+model_ols_v1 <- lm(cl_data_n1 ~ train_data$norm_poverty + train_data$norm_inc_tot)
+y_hat_v1 <- fitted.values(model_ols_v1)
+mean(y_hat_v1[cl_data_n1 == 1])
+mean(y_hat_v1[cl_data_n1 == 0])
+cl_data_n1 <- as.numeric(cl_data_n == 5)
+model_ols_v1 <- lm(cl_data_n1 ~ train_data$norm_poverty + train_data$norm_inc_tot)
+y_hat_v1 <- fitted.values(model_ols_v1)
+mean(y_hat_v1[cl_data_n1 == 1])
+mean(y_hat_v1[cl_data_n1 == 0])
+
+# However the accuracy for the knn and the multiple linear regression remained similar to the original model where
+# predicted values did not change significantly.
+# Nonetheless, we assumed that adding more variables will increase the accuracy of the test.
+# So, we added even more variables will increase the accuracy of the prediction, which were the following: 
+# poverty level, income total, family size, migration, rent, cost of electricity, 
+# cost of gas, cost of water, cost of fuel for home, linguistic isolation and number of rooms.
+dat_NYC <- subset(acs2017_ny, (acs2017_ny$in_NYC == 1)&(acs2017_ny$AGE > 20) & (acs2017_ny$AGE < 66))
+attach(dat_NYC) #dont need to attach it? I ran this and my accuracy become 0.69, without it, it is 0.37.
+summary(dat_NYC)
+borough_f <- factor((in_Bronx + 2*in_Manhattan + 3*in_StatenI + 4*in_Brooklyn + 5*in_Queens), levels=c(1,2,3,4,5),labels = c("Bronx","Manhattan","Staten Island","Brooklyn","Queens"))
+
+norm_varb <- function(X_in) { (X_in - min(X_in, na.rm = TRUE))/( max(X_in, na.rm = TRUE) - min(X_in, na.rm = TRUE) )
+}
+#change to numeric
+acs2017_ny$LINGISOL <- as.numeric(acs2017_ny$LINGISOL)
+
+norm_inc_tot <- norm_varb(INCTOT)
+norm_poverty <- norm_varb(POVERTY)
+norm_famsize <- norm_varb(FAMSIZE)
+norm_migration <- norm_varb(MIGRATE1D)
+norm_rent <- norm_varb(RENT)
+norm_cost_electricity <- norm_varb(COSTELEC)
+norm_cost_gas <- norm_varb(COSTGAS)
+norm_cost_water <- norm_varb(COSTWATR)
+norm_cost_fuelhome <- norm_varb(COSTFUEL)
+norm_linguistic <- norm_varb(LINGISOL)
+norm_rooms <- norm_varb(ROOMS)
+
+data_use_prelim <- data.frame(norm_poverty,norm_inc_tot,norm_famsize,norm_migration,norm_rent,norm_cost_electricity,
+                              norm_cost_gas,norm_cost_water,norm_cost_fuelhome,norm_linguistic,norm_rooms)
+good_obs_data_use <- complete.cases(data_use_prelim,borough_f)
+dat_use <- subset(data_use_prelim,good_obs_data_use)
+y_use <- subset(borough_f,good_obs_data_use)
+
+set.seed(12345)
+NN_obs <- sum(good_obs_data_use == 1)
+select1 <- (runif(NN_obs) < 0.8)
+train_data <- subset(dat_use,select1)
+test_data <- subset(dat_use,(!select1))
+cl_data <- y_use[select1]
+true_data <- y_use[!select1]
+
+summary(cl_data)
+prop.table(summary(cl_data))
+summary(train_data)
+require(class)
+for (indx in seq(1, 9, by= 2)) {
+  pred_borough <- knn(train_data, test_data, cl_data, k = indx, l = 0, prob = FALSE, use.all = TRUE)
+  num_correct_labels <- sum(pred_borough == true_data)
+  correct_rate <- num_correct_labels/length(true_data)
+  print(c(indx,correct_rate))
+}
+
+cl_data_n <- as.numeric(cl_data)
+model_ols1 <- lm(cl_data_n ~ train_data$norm_poverty + train_data$norm_inc_tot + train_data$norm_famsize + train_data$norm_migration + train_data$norm_rent + train_data$norm_cost_electricity
+                 + train_data$norm_cost_gas + train_data$norm_cost_water + train_data$norm_cost_fuelhome + train_data$norm_linguistic + train_data$norm_rooms)         
+y_hat <- fitted.values(model_ols1)
+
+mean(y_hat[cl_data_n == 1])
+mean(y_hat[cl_data_n == 2])
+mean(y_hat[cl_data_n == 3])
+mean(y_hat[cl_data_n == 4])
+mean(y_hat[cl_data_n == 5])
+
+cl_data_n1 <- as.numeric(cl_data_n == 1)
+model_ols_v1 <- lm(cl_data_n1 ~ train_data$norm_poverty + train_data$norm_inc_tot + train_data$norm_famsize + train_data$norm_migration + train_data$norm_rent + train_data$norm_cost_electricity
+                   + train_data$norm_cost_gas + train_data$norm_cost_water + train_data$norm_cost_fuelhome + train_data$norm_linguistic + train_data$norm_rooms)
+
+y_hat_v1 <- fitted.values(model_ols_v1)
+mean(y_hat_v1[cl_data_n1 == 1])
+mean(y_hat_v1[cl_data_n1 == 0])
+
+cl_data_n1 <- as.numeric(cl_data_n == 2)
+model_ols_v1 <- lm(cl_data_n1 ~ train_data$norm_poverty + train_data$norm_inc_tot + train_data$norm_famsize + train_data$norm_migration + train_data$norm_rent + train_data$norm_cost_electricity
+                   + train_data$norm_cost_gas + train_data$norm_cost_water + train_data$norm_cost_fuelhome + train_data$norm_linguistic + train_data$norm_rooms)
+y_hat_v1 <- fitted.values(model_ols_v1)
+mean(y_hat_v1[cl_data_n1 == 1])
+mean(y_hat_v1[cl_data_n1 == 0])
+
+cl_data_n1 <- as.numeric(cl_data_n == 3)
+model_ols_v1 <- lm( cl_data_n1 ~ train_data$norm_poverty + train_data$norm_inc_tot + train_data$norm_famsize + train_data$norm_migration + train_data$norm_rent + train_data$norm_cost_electricity
+                    + train_data$norm_cost_gas + train_data$norm_cost_water + train_data$norm_cost_fuelhome + train_data$norm_linguistic + train_data$norm_rooms)
+y_hat_v1 <- fitted.values(model_ols_v1)
+mean(y_hat_v1[cl_data_n1 == 1])
+mean(y_hat_v1[cl_data_n1 == 0])
+
+cl_data_n1 <- as.numeric(cl_data_n == 4)
+model_ols_v1 <- lm(cl_data_n1 ~ train_data$norm_poverty + train_data$norm_inc_tot + train_data$norm_famsize + train_data$norm_migration + train_data$norm_rent + train_data$norm_cost_electricity
+                   + train_data$norm_cost_gas + train_data$norm_cost_water + train_data$norm_cost_fuelhome + train_data$norm_linguistic + train_data$norm_rooms)
+y_hat_v1 <- fitted.values(model_ols_v1)
+mean(y_hat_v1[cl_data_n1 == 1])
+mean(y_hat_v1[cl_data_n1 == 0])
+
+cl_data_n1 <- as.numeric(cl_data_n == 5)
+model_ols_v1 <- lm(cl_data_n1 ~ train_data$norm_poverty + train_data$norm_inc_tot + train_data$norm_famsize + train_data$norm_migration + train_data$norm_rent + train_data$norm_cost_electricity
+                   + train_data$norm_cost_gas + train_data$norm_cost_water + train_data$norm_cost_fuelhome + train_data$norm_linguistic + train_data$norm_rooms)
+y_hat_v1 <- fitted.values(model_ols_v1)
+mean(y_hat_v1[cl_data_n1 == 1])
+mean(y_hat_v1[cl_data_n1 == 0])
+
+# After adding the extra variables, the accuracy of the first kth neighbor became 0.79, more than twice the accuracy of the original data set.
+# Unfortunately, the accuracy of the  third, fifth, seventh and ninth are all in the 0.50s range, but it is still better than the original 0.30.
+# In the initial simple regression went from and accuracy with the lowest 0.16 and the highest around 0.35.
+# Whereas, the regression with the added variables had the lowest of about 0.22 and the highest 0.40.
+# Overall, in the KNN and the simple linear regression the accuracy of the predicted values increased on all fronts compared to the initial test.
+# Additionally, when comparing the KNN to the multiple linear regression, the KNN gave a higher accuracy out of the two.
+# The reason the accuracy of the prediction could have increase because any one of the added variables 
+# could have weighed significantly in the aspect of classification.
+# Or the increase of variables in general could have had an overall increase in accuracy.
+# Nonetheless, it is safe to say that increasing the amount of variables to the knn and multiple linear regression increases the accuracy 
+# of predicting which neighborhoods people reside in.
+
+# Now, we will switch up the train and test data.
+# The most accurate KNN, which was the one with the added variables, had the train data at 80% and the test data at 20%.
+#Thus giving us these accuracy of the first nearest neighbor of 0.6943487.
+# Now we will try with a train/test data ratio of both 0.7/0.3 and 0.9/0.1.
+set.seed(12345)
+NN_obs <- sum(good_obs_data_use == 1)
+select1 <- (runif(NN_obs) < 0.9)
+train_data <- subset(dat_use,select1)
+test_data <- subset(dat_use,(!select1))
+cl_data <- y_use[select1]
+true_data <- y_use[!select1]
+
+summary(cl_data)
+prop.table(summary(cl_data))
+summary(train_data)
+require(class)
+for (indx in seq(1, 9, by= 2)) {
+  pred_borough <- knn(train_data, test_data, cl_data, k = indx, l = 0, prob = FALSE, use.all = TRUE)
+  num_correct_labels <- sum(pred_borough == true_data)
+  correct_rate <- num_correct_labels/length(true_data)
+  print(c(indx,correct_rate))
+}
+set.seed(12345)
+NN_obs <- sum(good_obs_data_use == 1)
+select1 <- (runif(NN_obs) < 0.7)
+train_data <- subset(dat_use,select1)
+test_data <- subset(dat_use,(!select1))
+cl_data <- y_use[select1]
+true_data <- y_use[!select1]
+
+summary(cl_data)
+prop.table(summary(cl_data))
+summary(train_data)
+require(class)
+for (indx in seq(1, 9, by= 2)) {
+  pred_borough <- knn(train_data, test_data, cl_data, k = indx, l = 0, prob = FALSE, use.all = TRUE)
+  num_correct_labels <- sum(pred_borough == true_data)
+  correct_rate <- num_correct_labels/length(true_data)
+  print(c(indx,correct_rate))
+}
+# When the train data/test data was was 70%/30%, there was an accuracy of 0.6696156, which was even lower than the 80/20 ratio.
+# When the train data was 90%/10%, there was 0.7230594 accuracy of the first neighbor, which was the highest accuracy of all the KNN trials.
+#Therefore, the greater the percentage of train data compared to test data, the more accurate the KNN will be.
+# With this in mind, we use a train data of 0.99 and a test data of 0.01, to get the highest accuracy possible.
+set.seed(12345)
+NN_obs <- sum(good_obs_data_use == 1)
+select1 <- (runif(NN_obs) < 0.99)
+train_data <- subset(dat_use,select1)
+test_data <- subset(dat_use,(!select1))
+cl_data <- y_use[select1]
+true_data <- y_use[!select1]
+
+summary(cl_data)
+prop.table(summary(cl_data))
+summary(train_data)
+require(class)
+for (indx in seq(1, 9, by= 2)) {
+  pred_borough <- knn(train_data, test_data, cl_data, k = indx, l = 0, prob = FALSE, use.all = TRUE)
+  num_correct_labels <- sum(pred_borough == true_data)
+  correct_rate <- num_correct_labels/length(true_data)
+  print(c(indx,correct_rate))
+}
+# By making ratio 0.99, and the test data 0.01, we can increase the accuracy of the first nearest neighbor to 0.7722343, the highest accuracy we have gotten.
+# However, the trade off for making the the test data so small is that since the the test data is a disjoint of the training data, if it were made up of outliers, those outliers will weigh more heavily and thus more likely to skew the knn.
+cl_data_n <- as.numeric(cl_data)
+model_ols1 <- lm(cl_data_n ~ train_data$norm_poverty + train_data$norm_inc_tot + train_data$norm_famsize + train_data$norm_migration + train_data$norm_rent + train_data$norm_cost_electricity
+                 + train_data$norm_cost_gas + train_data$norm_cost_water + train_data$norm_cost_fuelhome + train_data$norm_linguistic + train_data$norm_rooms)         
+y_hat <- fitted.values(model_ols1)
+
+cl_data_n1 <- as.numeric(cl_data_n == 1)
+model_ols_v1 <- lm(cl_data_n1 ~ train_data$norm_poverty + train_data$norm_inc_tot + train_data$norm_famsize + train_data$norm_migration + train_data$norm_rent + train_data$norm_cost_electricity
+                   + train_data$norm_cost_gas + train_data$norm_cost_water + train_data$norm_cost_fuelhome + train_data$norm_linguistic + train_data$norm_rooms)
+
+y_hat_v1 <- fitted.values(model_ols_v1)
+mean(y_hat_v1[cl_data_n1 == 1])
+mean(y_hat_v1[cl_data_n1 == 0])
+
+cl_data_n1 <- as.numeric(cl_data_n == 2)
+model_ols_v1 <- lm(cl_data_n1 ~ train_data$norm_poverty + train_data$norm_inc_tot + train_data$norm_famsize + train_data$norm_migration + train_data$norm_rent + train_data$norm_cost_electricity
+                   + train_data$norm_cost_gas + train_data$norm_cost_water + train_data$norm_cost_fuelhome + train_data$norm_linguistic + train_data$norm_rooms)
+
+y_hat_v1 <- fitted.values(model_ols_v1)
+mean(y_hat_v1[cl_data_n1 == 1])
+mean(y_hat_v1[cl_data_n1 == 0])
+
+cl_data_n1 <- as.numeric(cl_data_n == 3)
+model_ols_v1 <- lm( cl_data_n1 ~ train_data$norm_poverty + train_data$norm_inc_tot + train_data$norm_famsize + train_data$norm_migration + train_data$norm_rent + train_data$norm_cost_electricity
+                    + train_data$norm_cost_gas + train_data$norm_cost_water + train_data$norm_cost_fuelhome + train_data$norm_linguistic + train_data$norm_rooms)
+y_hat_v1 <- fitted.values(model_ols_v1)
+mean(y_hat_v1[cl_data_n1 == 1])
+mean(y_hat_v1[cl_data_n1 == 0])
+
+cl_data_n1 <- as.numeric(cl_data_n == 4)
+model_ols_v1 <- lm(cl_data_n1 ~ train_data$norm_poverty + train_data$norm_inc_tot + train_data$norm_famsize + train_data$norm_migration + train_data$norm_rent + train_data$norm_cost_electricity
+                   + train_data$norm_cost_gas + train_data$norm_cost_water + train_data$norm_cost_fuelhome + train_data$norm_linguistic + train_data$norm_rooms)
+y_hat_v1 <- fitted.values(model_ols_v1)
+mean(y_hat_v1[cl_data_n1 == 1])
+mean(y_hat_v1[cl_data_n1 == 0])
+
+cl_data_n1 <- as.numeric(cl_data_n == 5)
+model_ols_v1 <- lm(cl_data_n1 ~ train_data$norm_poverty + train_data$norm_inc_tot + train_data$norm_famsize + train_data$norm_migration + train_data$norm_rent + train_data$norm_cost_electricity
+                   + train_data$norm_cost_gas + train_data$norm_cost_water + train_data$norm_cost_fuelhome + train_data$norm_linguistic + train_data$norm_rooms)
+y_hat_v1 <- fitted.values(model_ols_v1)
+mean(y_hat_v1[cl_data_n1 == 1])
+mean(y_hat_v1[cl_data_n1 == 0])
+
+#However, when using the multiple linear regression of 0.99/0.01 from the train to test data, the accuracy of the regression ever so slightly drops,
+#which that there may be an outlier in the test data that drops the accuracy of the prediction.
+
+# After classifying all the boroughs through out the different attempts, it seems that Brooklyn is consistently the easiest to classify.
+plot(cl_data_n1)
+plot(y_hat_v1)
+plot(cl_data_n)
+plot(y_hat)
+# When comparing the two, there are these long areas where there are not black spots in the Bronx. 
+# The missing areas are reflective of our exclusion of other variables from the overall NYC data compared to just the Bronx.
+
